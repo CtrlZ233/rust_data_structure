@@ -159,7 +159,7 @@ pub mod vector {
 
 pub mod list {
 
-    use std::{borrow::Borrow, cell::RefCell, convert::TryInto, rc::Rc};
+    use std::{arch::x86_64::_SIDD_SWORD_OPS, borrow::Borrow, cell::RefCell, convert::TryInto, rc::Rc};
 
     use super::{CommResult, LinearTable};
 
@@ -237,77 +237,131 @@ pub mod list {
         }
 
         fn prior_elem(&self, elem: T) -> Option<T> {
-            // if self.empty() {
-            //     return None;
-            // }
-            // let mut pre = self.next.as_ref().unwrap();
-            // let mut cur =  pre.next.as_ref();
-            // while let Some(t) = cur {
-            //     if t.data == elem {
-            //         return Some(pre.data.clone());
-            //     }
-            //     pre = cur.unwrap();
-            //     cur = pre.next.as_ref();
-            // }
+            if self.empty() {
+                return None;
+            }
+            let mut pre = self.head.as_ref().borrow().next.clone().unwrap();
+            let mut cur = pre.as_ref().borrow().next.clone();
+            while let Some(t) = cur.clone() {
+                if t.as_ref().borrow().data.clone().unwrap() == elem {
+                    return pre.as_ref().borrow().data.clone();
+                }
+                pre = cur.unwrap();
+                cur = pre.as_ref().borrow().next.clone();
+            }
             None
         }
 
         fn next_elem(&self, elem: T) -> Option<T> {
-            // if self.empty() {
-            //     return None;
-            // }
-            // let mut cur = self.next.as_ref().unwrap();
-            // let mut next = cur.next.as_ref();
-            // while let Some(t) = next {
-            //     if cur.data == elem {
-            //         return Some(t.data.clone());
-            //     }
-            //     cur = next.unwrap();
-            //     next = cur.next.as_ref();
-            // }
+            if self.empty() {
+                return None;
+            }
+            let mut cur = self.head.as_ref().borrow().next.clone().unwrap();
+            let mut next = cur.as_ref().borrow().next.clone();
+            while let Some(t) = next.clone() {
+                if cur.as_ref().borrow().data.clone().unwrap() == elem {
+                    return t.as_ref().borrow().data.clone();
+                }
+                cur = next.unwrap();
+                next = cur.as_ref().borrow().next.clone();
+            }
             None
         }
 
         fn insert(&mut self, elem: T, index: usize) -> CommResult {
-            // let mut index = index;
-            // if index == 0 {
-            //     let newNode = Rc::new(Node{data: elem, next: self.next.clone()});
-            //     self.next = Some(newNode);
-            //     return CommResult::Ok;
-            // }
-            // let mut pre = self.next.as_ref();
-            // while index > 1 {
-            //     match pre {
-            //         Some(t) => {
-            //             pre = t.next.as_ref();
-            //             index -= 1;
-            //         }
+           if index >  self.len {
+               return CommResult::Err;
+           }
+            let mut index = index;
+            if index == 0 {
+                let newNode = Rc::new(RefCell::new(
+                    Node{data: Some(elem), next: self.head.as_ref().borrow().next.clone()}));
+                self.head.as_ref().borrow_mut().next = Some(newNode);
+                self.len += 1;
+                return CommResult::Ok;
+            }
+            let mut pre = self.head.as_ref().borrow().next.clone();
+    
+            while index > 1 {
+                match pre {
+                    Some(t) => {
+                        pre = t.as_ref().borrow().next.clone();
+                        index -= 1;
+                    }
+                    _ => {
+                        return CommResult::Err;
+                    }
+                }
+            }
 
-            //         _ => {
-            //             return CommResult::Err;
-            //         }
-            //     }
-            // }
-            // let newNode = Rc::new(
-            //     Node {data: elem, next: pre.unwrap().next.clone()}
-            // );
-            // // pre.unwrap().as_ref().borrow_mut().next = Some(newNode);
-            // // todo!
-            // let c  =pre.unwrap().next.as;
-            // pre.unwrap().next = Some(newNode);
+            let newNode = Rc::new(RefCell::new(
+                Node{ data: Some(elem), next: pre.clone().unwrap().as_ref().borrow().next.clone()}
+            ));
+            pre.unwrap().as_ref().borrow_mut().next = Some(newNode);
+            self.len += 1;
             CommResult::Ok
         }
 
         fn delete(&mut self, index: usize) -> Result<T, ()> {
-            Err(())
+            if index >= self.len {
+                return Err(());
+            }
+            let mut index = index;
+            let mut pre = self.head.clone();
+            while index > 0 {
+                 index -= 1;
+                 pre = pre.clone().as_ref().borrow().next.clone().unwrap();
+            }
+            let tmp = pre.as_ref().borrow().next.clone().unwrap();
+            let ans = tmp.as_ref().borrow().data.clone().unwrap();
+            pre.as_ref().borrow_mut().next = tmp.as_ref().borrow().next.clone();
+            self.len -= 1;
+            Ok(ans)
         }
 
         fn traverse<F: Fn(&T)>(&self, func: F) {
-
+            let mut cur = self.head.as_ref().borrow().next.clone();
+            while let Some(t) = cur {
+                func(t.as_ref().borrow().data.as_ref().unwrap());
+                cur = t.as_ref().borrow().next.clone();
+            }
         }
 
         fn merge(&mut self, other: Self) {
+            let mut left = self.head.as_ref().borrow().next.clone();
+            let mut right = other.head.as_ref().borrow().next.clone();
+            let newHead = Rc::new(RefCell::new(
+                Node{data:self.head.as_ref().borrow().data.clone(), next: None}
+            ));
+            let mut tmp = newHead.clone();
+            loop {
+                match (left.clone(), right.clone())  {
+                    (Some(a), Some(b)) => {
+                        if a.as_ref().borrow().data.clone().unwrap() > b.as_ref().borrow().data.clone().unwrap() {
+                            tmp.as_ref().borrow_mut().next = Some(b.clone());
 
+                            right = b.as_ref().borrow().next.clone();
+                        } else {
+                            tmp.as_ref().borrow_mut().next = Some(a.clone());
+                            left = a.as_ref().borrow().next.clone();
+                        }
+                    }
+                    _ => { break; }
+                }
+                tmp = tmp.clone().as_ref().borrow().next.clone().unwrap();
+            }
+            while let Some(t) = left {
+                tmp.as_ref().borrow_mut().next = Some(t.clone());
+                left = t.as_ref().borrow().next.clone();
+                tmp = t.clone();
+            }
+            while let Some(t) = right {
+                tmp.as_ref().borrow_mut().next = Some(t.clone());
+                right = t.as_ref().borrow().next.clone();
+                tmp = t.clone();
+            }
+            self.head = newHead;
+            self.len += other.len;
         }
     }
 
