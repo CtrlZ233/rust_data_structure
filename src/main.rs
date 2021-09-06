@@ -1,6 +1,11 @@
 mod linearTable;
+mod limitedLinearTable;
+mod test;
+use std::ops::Index;
 
 use linearTable::{LinearTable, vector::Vector, list::List};
+
+use crate::limitedLinearTable::stack::Stack;
 fn vector_test() {
     println!("======================== vector test ===========================");
     let mut c = Vector::<i32>::new();
@@ -18,7 +23,7 @@ fn vector_test() {
     a.insert(3, 0);
     a.insert(5, 1);
     a.insert(6, 2);
-    c.merge(a);
+    // c.merge(a);
     c.traverse(print);
 }   
 
@@ -38,9 +43,28 @@ fn list_test() {
     let mut l2 = List::<i32>::new();
     l2.insert(3, 0);
     l2.insert(5, 1);
-    l1.merge(l2);
+    // l1.merge(l2);
     l1.traverse(print);
 }
+
+fn stack_test() {
+    println!("======================== stack test ===========================");
+    let mut s1 = Stack::<i32>::new();
+    let print = |x: &i32| {
+        println!("{}", x);
+    };
+    s1.push(1);
+    s1.push(2);
+    s1.push(3);
+    s1.pop();
+    s1.push(4);
+    s1.push(5);
+    s1.pop();
+    s1.push(6);
+    s1.traverse(print);
+
+}
+
 #[derive(Debug)]
 struct t {
     elem: i32,
@@ -62,5 +86,9 @@ struct t {
 fn main() {
     vector_test();
     list_test();
+    stack_test();
+    // let mut a: usize = 0;
+    // a -= 1;
+    // println!("{}", a);
     // test();
 }

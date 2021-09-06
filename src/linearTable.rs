@@ -12,8 +12,12 @@ pub trait LinearTable<T>
     fn next_elem(&self, elem: T) -> Option<T>;
     fn insert(&mut self, elem: T, index: usize) -> CommResult;
     fn delete(&mut self, index: usize) -> Result<T, ()>;
-    fn traverse<F: Fn(&T)>(&self, func: F);
-    fn merge(&mut self, other: Self);
+
+
+    fn traverse(&self, func: fn(&T));
+
+
+    fn merge(&mut self, other: Self) where Self:Sized;
 }
 
 pub enum CommResult {
@@ -116,7 +120,7 @@ pub mod vector {
             }
         }
 
-        fn traverse<F: Fn(&T)>(&self, func: F) {
+        fn traverse(&self, func: fn(&T)) {
             for v in self.vector.iter() {
                 func(v);
             }
@@ -159,7 +163,7 @@ pub mod vector {
 
 pub mod list {
 
-    use std::{arch::x86_64::_SIDD_SWORD_OPS, borrow::Borrow, cell::RefCell, convert::TryInto, rc::Rc};
+    use std::{cell::RefCell, convert::TryInto, rc::Rc};
 
     use super::{CommResult, LinearTable};
 
@@ -190,10 +194,12 @@ pub mod list {
     {
         fn destroy(&mut self) {
             self.head.borrow_mut().next = None;
+            self.len = 0;
         }
 
         fn clear(&mut self) {
             self.head.borrow_mut().next = None;
+            self.len = 0;
         }
 
         fn empty(&self) -> bool {
@@ -319,7 +325,7 @@ pub mod list {
             Ok(ans)
         }
 
-        fn traverse<F: Fn(&T)>(&self, func: F) {
+        fn traverse(&self, func: fn(&T)) {
             let mut cur = self.head.as_ref().borrow().next.clone();
             while let Some(t) = cur {
                 func(t.as_ref().borrow().data.as_ref().unwrap());
