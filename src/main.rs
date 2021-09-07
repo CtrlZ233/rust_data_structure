@@ -1,11 +1,15 @@
+use jemallocator;
+use jemalloc_ctl::{AsName, Access};
+
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 mod linearTable;
 mod limitedLinearTable;
 mod test;
-use std::ops::Index;
 
 use linearTable::{LinearTable, vector::Vector, list::List};
 
-use crate::limitedLinearTable::stack::Stack;
+use crate::{limitedLinearTable::{stack::Stack, queue::Queue}, linearTable::list::DLinkList};
 fn vector_test() {
     println!("======================== vector test ===========================");
     let mut c = Vector::<i32>::new();
@@ -29,22 +33,50 @@ fn vector_test() {
 
 fn list_test() {
     println!("======================== list test ===========================");
-    let mut l1 = List::<i32>::new();
-    let print = |x: &i32| {
-        println!("{}", x);
-    };
-    l1.insert(1, 0);
-    l1.insert(2, 1);
-    l1.insert(4, 2);
-    l1.delete(1).unwrap();
-    // println!("{}", l.next_elem(4).unwrap());
-    l1.traverse(print);
+    {
+        let mut q = List::<i32>::new();
+        let mut line = String::new();
+        let mut index = 100000000;
+        
+        while index > 0{
+            q.insert(index, 0);
+            index -= 1;
+        }
+        println!("push complete");
+        
+        let b1 = std::io::stdin().read_line(&mut line).unwrap();
 
-    let mut l2 = List::<i32>::new();
-    l2.insert(3, 0);
-    l2.insert(5, 1);
-    // l1.merge(l2);
-    l1.traverse(print);
+        while !q.empty() {
+            q.delete(0);
+            // println!("{}", q.pop().unwrap());
+        }
+        println!("pop complete");
+    }
+
+    {
+        let mut q = List::<i32>::new();
+        let mut line = String::new();
+        let mut index = 100000000;
+        
+        while index > 0{
+            q.insert(index, 0);
+            index -= 1;
+        }
+        println!("push complete");
+        
+        let b1 = std::io::stdin().read_line(&mut line).unwrap();
+
+        while !q.empty() {
+            q.delete(0);
+            // println!("{}", q.pop().unwrap());
+        }
+        println!("pop complete");
+    }
+
+    while true {
+
+    }
+
 }
 
 fn stack_test() {
@@ -82,13 +114,100 @@ struct t {
 //     println!("{:?}", c.unwrap());
 // }
 
+fn queue_test() {
+    {
+        let mut q = Queue::<i32>::new();
+        let mut line = String::new();
+        let mut index = 100000000;
+        
+        while index > 0{
+            q.push(index);
+            index -= 1;
+        }
+        println!("push complete");
+        
+        let b1 = std::io::stdin().read_line(&mut line).unwrap();
+
+        while !q.empty() {
+            q.pop().unwrap();
+            // println!("{}", q.pop().unwrap());
+        }
+        println!("pop complete");
+    }
+
+    {
+        let mut q = Queue::<i32>::new();
+        let mut line = String::new();
+        let mut index = 100000000;
+        
+        while index > 0{
+            q.push(index);
+            index -= 1;
+        }
+        println!("push complete");
+        
+        let b1 = std::io::stdin().read_line(&mut line).unwrap();
+
+        while !q.empty() {
+            q.pop().unwrap();
+            // println!("{}", q.pop().unwrap());
+        }
+        println!("pop complete");
+    }
+
+    {
+        let mut q = Queue::<i32>::new();
+        let mut line = String::new();
+        let mut index = 100000000;
+        
+        while index > 0{
+            q.push(index);
+            index -= 1;
+        }
+        println!("push complete");
+        
+        let b1 = std::io::stdin().read_line(&mut line).unwrap();
+
+        while !q.empty() {
+            q.pop().unwrap();
+            // println!("{}", q.pop().unwrap());
+        }
+        println!("pop complete");
+    }
+
+    {
+        let mut q = Queue::<i32>::new();
+        let mut line = String::new();
+        let mut index = 100000000;
+        
+        while index > 0{
+            q.push(index);
+            index -= 1;
+        }
+        println!("push complete");
+        
+        let b1 = std::io::stdin().read_line(&mut line).unwrap();
+
+        while !q.empty() {
+            q.pop().unwrap();
+            // println!("{}", q.pop().unwrap());
+        }
+        println!("pop complete");
+    }
+    
+    while true {
+        
+    }
+}
 
 fn main() {
-    vector_test();
-    list_test();
-    stack_test();
+    // vector_test();
+    // list_test();
+    // stack_test();
     // let mut a: usize = 0;
     // a -= 1;
     // println!("{}", a);
     // test();
+    queue_test();
+    
 }

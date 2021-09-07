@@ -1,6 +1,6 @@
-
 pub trait LinearTable<T>
-    where T: PartialEq + PartialOrd + Clone
+where
+    T: PartialEq + PartialOrd + Clone,
 {
     fn destroy(&mut self);
     fn clear(&mut self);
@@ -13,11 +13,17 @@ pub trait LinearTable<T>
     fn insert(&mut self, elem: T, index: usize) -> CommResult;
     fn delete(&mut self, index: usize) -> Result<T, ()>;
 
+    fn push_back(&mut self, elem: T);
+    fn push_front(&mut self, elem: T);
+    fn pop_back(&mut self) -> Result<T, ()>;
+    fn pop_front(&mut self) -> Result<T, ()>;
+    fn get_front(&self) -> Option<T>;
+    fn get_back(&self) -> Option<T>;
+
 
     fn traverse(&self, func: fn(&T));
 
-
-    fn merge(&mut self, other: Self) where Self:Sized;
+    // fn merge(&mut self, other: Self) where Self:Sized;
 }
 
 pub enum CommResult {
@@ -30,22 +36,26 @@ pub mod vector {
     use super::{CommResult, LinearTable};
 
     pub struct Vector<T>
-        where T: PartialEq + PartialOrd + Clone
+    where
+        T: PartialEq + PartialOrd + Clone,
     {
         vector: Vec<T>,
     }
 
     impl<T> Vector<T>
-        where T: PartialEq + PartialOrd + Clone
+    where
+        T: PartialEq + PartialOrd + Clone,
     {
         pub fn new() -> Self {
-            Vector { vector: Vec::<T>::new() }
+            Vector {
+                vector: Vec::<T>::new(),
+            }
         }
     }
     impl<T> LinearTable<T> for Vector<T>
-        where T: PartialEq + PartialOrd + Clone
+    where
+        T: PartialEq + PartialOrd + Clone,
     {
-
         fn destroy(&mut self) {
             // do nothing
         }
@@ -73,7 +83,7 @@ pub mod vector {
         fn locate_elem(&self, elem: T) -> Option<usize> {
             for (i, v) in self.vector.iter().enumerate() {
                 if *v == elem {
-                    return Some(i)
+                    return Some(i);
                 }
             }
             None
@@ -120,12 +130,44 @@ pub mod vector {
             }
         }
 
+        fn push_back(&mut self, elem: T) {
+            self.vector.push(elem);
+        }
+
+        fn push_front(&mut self, elem: T) {
+            self.insert(elem, 0);
+        }
+
+        fn pop_back(&mut self) -> Result<T, ()> {
+            match self.vector.pop() {
+                Some(t) => Ok(t),
+                None => Err(()),
+            }
+        }
+
+        fn pop_front(&mut self) -> Result<T, ()> {
+            self.delete(0)
+        }
+
+        fn get_back(&self) -> Option<T> {
+            self.get_elem(self.length() - 1)
+        }
+
+        fn get_front(&self) -> Option<T> {
+            self.get_elem(0)
+        }
+
         fn traverse(&self, func: fn(&T)) {
             for v in self.vector.iter() {
                 func(v);
             }
         }
+    }
 
+    impl<T> Vector<T>
+    where
+        T: PartialOrd + PartialEq + Clone,
+    {
         fn merge(&mut self, other: Vector<T>) {
             let mut tmp = Vec::<T>::new();
             let mut iter1 = self.vector.iter();
@@ -143,7 +185,7 @@ pub mod vector {
                             b = iter2.next();
                         }
                     }
-                    _ => break
+                    _ => break,
                 }
             }
 
@@ -163,42 +205,57 @@ pub mod vector {
 
 pub mod list {
 
-    use std::{cell::RefCell, convert::TryInto, rc::Rc};
+    use std::{
+        borrow::{Borrow, BorrowMut},
+        cell::RefCell,
+        convert::TryInto,
+        rc::{Rc, Weak},
+    };
 
     use super::{CommResult, LinearTable};
 
     pub struct List<T>
-        where T: PartialEq + PartialOrd + Clone
+    where
+        T: PartialEq + PartialOrd + Clone,
     {
         head: Rc<RefCell<Node<T>>>,
         len: usize,
     }
 
     struct Node<T>
-        where T: PartialEq + PartialOrd + Clone
+    where
+        T: PartialEq + PartialOrd + Clone,
     {
         data: Option<T>,
         next: Option<Rc<RefCell<Node<T>>>>,
     }
 
     impl<T> List<T>
-        where T: PartialEq + PartialOrd + Clone
+    where
+        T: PartialEq + PartialOrd + Clone,
     {
         pub fn new() -> Self {
-            List { head: Rc::new(RefCell::new(Node {data: None, next: None})), len: 0, }
+            List {
+                head: Rc::new(RefCell::new(Node {
+                    data: None,
+                    next: None,
+                })),
+                len: 0,
+            }
         }
     }
 
     impl<T> LinearTable<T> for List<T>
-        where T: PartialEq + PartialOrd + Clone
+    where
+        T: PartialEq + PartialOrd + Clone,
     {
         fn destroy(&mut self) {
-            self.head.borrow_mut().next = None;
+            self.head.as_ref().borrow_mut().next = None;
             self.len = 0;
         }
 
         fn clear(&mut self) {
-            self.head.borrow_mut().next = None;
+            self.head.as_ref().borrow_mut().next = None;
             self.len = 0;
         }
 
@@ -215,7 +272,7 @@ pub mod list {
 
         fn get_elem(&self, index: usize) -> Option<T> {
             let mut index: i32 = index.try_into().unwrap();
-            let mut pre = (*self.head).borrow().next.clone();
+            let mut pre = self.head.as_ref().borrow().next.clone();
             while index >= 0 {
                 match pre {
                     Some(t) => {
@@ -275,19 +332,21 @@ pub mod list {
         }
 
         fn insert(&mut self, elem: T, index: usize) -> CommResult {
-           if index >  self.len {
-               return CommResult::Err;
-           }
+            if index > self.len {
+                return CommResult::Err;
+            }
             let mut index = index;
             if index == 0 {
-                let newNode = Rc::new(RefCell::new(
-                    Node{data: Some(elem), next: self.head.as_ref().borrow().next.clone()}));
+                let newNode = Rc::new(RefCell::new(Node {
+                    data: Some(elem),
+                    next: self.head.as_ref().borrow().next.clone(),
+                }));
                 self.head.as_ref().borrow_mut().next = Some(newNode);
                 self.len += 1;
                 return CommResult::Ok;
             }
             let mut pre = self.head.as_ref().borrow().next.clone();
-    
+
             while index > 1 {
                 match pre {
                     Some(t) => {
@@ -300,9 +359,10 @@ pub mod list {
                 }
             }
 
-            let newNode = Rc::new(RefCell::new(
-                Node{ data: Some(elem), next: pre.clone().unwrap().as_ref().borrow().next.clone()}
-            ));
+            let newNode = Rc::new(RefCell::new(Node {
+                data: Some(elem),
+                next: pre.clone().unwrap().as_ref().borrow().next.clone(),
+            }));
             pre.unwrap().as_ref().borrow_mut().next = Some(newNode);
             self.len += 1;
             CommResult::Ok
@@ -315,14 +375,38 @@ pub mod list {
             let mut index = index;
             let mut pre = self.head.clone();
             while index > 0 {
-                 index -= 1;
-                 pre = pre.clone().as_ref().borrow().next.clone().unwrap();
+                index -= 1;
+                pre = pre.clone().as_ref().borrow().next.clone().unwrap();
             }
             let tmp = pre.as_ref().borrow().next.clone().unwrap();
             let ans = tmp.as_ref().borrow().data.clone().unwrap();
             pre.as_ref().borrow_mut().next = tmp.as_ref().borrow().next.clone();
             self.len -= 1;
             Ok(ans)
+        }
+
+        fn push_back(&mut self, elem: T) {
+            self.insert(elem, self.len);
+        }
+
+        fn push_front(&mut self, elem: T) {
+            self.insert(elem, 0);
+        }
+
+        fn pop_front(&mut self) -> Result<T, ()> {
+            self.delete(0)
+        }
+
+        fn pop_back(&mut self) -> Result<T, ()> {
+            self.delete(self.len - 1)
+        }
+
+        fn get_front(&self) -> Option<T> {
+            self.get_elem(0)
+        }
+
+        fn get_back(&self) -> Option<T> {
+            self.get_elem(self.length() - 1)
         }
 
         fn traverse(&self, func: fn(&T)) {
@@ -332,18 +416,25 @@ pub mod list {
                 cur = t.as_ref().borrow().next.clone();
             }
         }
-
+    }
+    impl<T> List<T>
+    where
+        T: PartialEq + PartialOrd + Clone,
+    {
         fn merge(&mut self, other: Self) {
             let mut left = self.head.as_ref().borrow().next.clone();
             let mut right = other.head.as_ref().borrow().next.clone();
-            let newHead = Rc::new(RefCell::new(
-                Node{data:self.head.as_ref().borrow().data.clone(), next: None}
-            ));
+            let newHead = Rc::new(RefCell::new(Node {
+                data: self.head.as_ref().borrow().data.clone(),
+                next: None,
+            }));
             let mut tmp = newHead.clone();
             loop {
-                match (left.clone(), right.clone())  {
+                match (left.clone(), right.clone()) {
                     (Some(a), Some(b)) => {
-                        if a.as_ref().borrow().data.clone().unwrap() > b.as_ref().borrow().data.clone().unwrap() {
+                        if a.as_ref().borrow().data.clone().unwrap()
+                            > b.as_ref().borrow().data.clone().unwrap()
+                        {
                             tmp.as_ref().borrow_mut().next = Some(b.clone());
 
                             right = b.as_ref().borrow().next.clone();
@@ -352,7 +443,9 @@ pub mod list {
                             left = a.as_ref().borrow().next.clone();
                         }
                     }
-                    _ => { break; }
+                    _ => {
+                        break;
+                    }
                 }
                 tmp = tmp.clone().as_ref().borrow().next.clone().unwrap();
             }
@@ -371,4 +464,265 @@ pub mod list {
         }
     }
 
+    pub struct DLinkList<T>
+    where
+        T: PartialEq + PartialOrd + Clone,
+    {
+        head: Rc<RefCell<DNode<T>>>,
+        tail: Rc<RefCell<DNode<T>>>,
+        len: usize,
+    }
+
+    struct DNode<T>
+    where
+        T: PartialOrd + PartialEq + Clone,
+    {
+        pre: Option<Weak<RefCell<DNode<T>>>>,
+        next: Option<Rc<RefCell<DNode<T>>>>,
+        data: Option<T>,
+    }
+
+    impl<T> LinearTable<T> for DLinkList<T>
+    where
+        T: PartialEq + PartialOrd + Clone,
+    {
+        fn destroy(&mut self) {
+            self.head.as_ref().borrow_mut().next = Some(self.tail.clone());
+            self.tail.as_ref().borrow_mut().pre = Some(Rc::downgrade(&self.head));
+            self.len = 0;
+        }
+
+        fn clear(&mut self) {
+            self.head.as_ref().borrow_mut().next = Some(self.tail.clone());
+            self.tail.as_ref().borrow_mut().pre = Some(Rc::downgrade(&self.head));
+            self.len = 0;
+        }
+
+        fn empty(&self) -> bool {
+            self.len == 0
+        }
+
+        fn length(&self) -> usize {
+            self.len
+        }
+
+        fn get_elem(&self, index: usize) -> Option<T> {
+            if index >= self.len {
+                return None;
+            }
+            let mut index = index;
+            let mut cur = self.head.as_ref().borrow().next.clone();
+            while index > 0 {
+                match cur {
+                    Some(t) => {
+                        cur = t.as_ref().borrow().next.clone();
+                        index -= 1;
+                    }
+                    _ => return None,
+                }
+            }
+            cur.unwrap().as_ref().borrow().data.clone()
+        }
+
+        fn next_elem(&self, elem: T) -> Option<T> {
+            None
+        }
+
+        fn prior_elem(&self, elem: T) -> Option<T> {
+            None
+        }
+
+        fn locate_elem(&self, elem: T) -> Option<usize> {
+            let mut index = self.len;
+            let mut cur = self.head.as_ref().borrow().next.clone();
+            while index > 0 {
+                match cur {
+                    Some(t) => {
+                        if t.as_ref().borrow().data.clone().unwrap() == elem {
+                            return Some(self.len - index);
+                        }
+                        index -= 1;
+                        cur = t.as_ref().borrow().next.clone();
+                    }
+                    _ => {
+                        break;
+                    }
+                }
+            }
+            None
+        }
+
+        fn insert(&mut self, elem: T, index: usize) -> CommResult {
+            if index > self.len {
+                return CommResult::Err;
+            }
+            let mut index = index;
+            let mut pre = self.head.clone();
+            while index > 0 {
+                pre = pre.clone().as_ref().borrow().next.clone().unwrap();
+                index -= 1;
+            }
+
+            let newNode = Rc::new(RefCell::new(DNode {
+                data: Some(elem),
+                next: pre.clone().as_ref().borrow().next.clone(),
+                pre: Some(Rc::downgrade(&pre.clone())),
+            }));
+
+            newNode
+                .as_ref()
+                .borrow()
+                .next
+                .clone()
+                .unwrap()
+                .as_ref()
+                .borrow_mut()
+                .pre = Some(Rc::downgrade(&newNode));
+
+            pre.as_ref().borrow_mut().next = Some(newNode);
+            self.len += 1;
+            CommResult::Ok
+        }
+
+        fn delete(&mut self, index: usize) -> Result<T, ()> {
+            if index >= self.len {
+                return Err(());
+            }
+            let mut index = index;
+            let mut pre = self.head.clone();
+            while index > 0 {
+                index -= 1;
+                pre = pre.clone().as_ref().borrow().next.clone().unwrap();
+            }
+            let tmp = pre.as_ref().borrow().next.clone().unwrap();
+            let ans = tmp.as_ref().borrow().data.clone().unwrap();
+            pre.as_ref().borrow_mut().next = tmp.as_ref().borrow().next.clone();
+            tmp.as_ref()
+                .borrow()
+                .next
+                .clone()
+                .unwrap()
+                .as_ref()
+                .borrow_mut()
+                .pre = Some(Rc::downgrade(&pre));
+            self.len -= 1;
+            Ok(ans)
+        }
+
+        fn push_back(&mut self, elem: T) {
+            let newNode = Rc::new(RefCell::new(DNode {
+                next: Some(self.tail.clone()),
+                pre: self.tail.as_ref().borrow().pre.clone(),
+                data: Some(elem),
+            }));
+
+            match self.tail.as_ref().borrow().pre.clone().unwrap().upgrade() {
+                Some(t) => {
+                    t.as_ref().borrow_mut().next = Some(newNode.clone());
+                }
+                _ => {
+                    return;
+                }
+            }
+            self.tail.as_ref().borrow_mut().pre = Some(Rc::downgrade(&newNode));
+            self.len += 1;
+        }
+
+        fn push_front(&mut self, elem: T) {
+            self.insert(elem, 0);
+        }
+
+        fn pop_front(&mut self) -> Result<T, ()> {
+            self.delete(0)
+        }
+
+        fn pop_back(&mut self) -> Result<T, ()> {
+            if self.empty() {
+                Err(())
+            } else {
+                let target = self.tail.as_ref().borrow().pre.clone().unwrap().upgrade();
+                match target {
+                    Some(t) => {
+                        let pre = t.as_ref().borrow().pre.clone().unwrap().upgrade();
+                        match pre {
+                            Some(p) => {
+                                p.as_ref().borrow_mut().next = Some(self.tail.clone());
+                                self.tail.as_ref().borrow_mut().pre = Some(Rc::downgrade(&p));
+                                self.len -= 1;
+                                return Ok(t.as_ref().borrow().data.clone().unwrap())
+                            }
+                            _ => {
+                                return Err(());
+                            }
+                        }
+                    }
+                    _ => {
+                        return Err(());
+                    }
+                }
+            }
+        }
+
+        fn get_front(&self) -> Option<T> {
+            self.get_elem(0)
+        }
+
+        fn get_back(&self) -> Option<T> {
+            if self.empty() {
+                None
+            } else {
+                match self.tail.as_ref().borrow().pre.clone().unwrap().upgrade() {
+                    Some(t) => {
+                        t.as_ref().borrow().data.clone()
+                    }
+                    _ => {
+                        None
+                    }
+                }
+            }
+        }
+
+        fn traverse(&self, func: fn(&T)) {
+            let mut cur = self.head.as_ref().borrow().next.clone();
+            let mut index = self.len;
+            while index > 0 {
+                func(
+                    cur.clone()
+                        .unwrap()
+                        .as_ref()
+                        .borrow()
+                        .data
+                        .as_ref()
+                        .unwrap(),
+                );
+                cur = cur.unwrap().as_ref().borrow().next.clone();
+                index -= 1;
+            }
+        }
+    }
+
+    impl<T> DLinkList<T>
+    where
+        T: PartialEq + PartialOrd + Clone,
+    {
+        pub fn new() -> Self {
+            let new_list = DLinkList {
+                head: Rc::new(RefCell::new(DNode {
+                    pre: None,
+                    next: None,
+                    data: None,
+                })),
+                tail: Rc::new(RefCell::new(DNode {
+                    pre: None,
+                    next: None,
+                    data: None,
+                })),
+                len: 0,
+            };
+
+            new_list.head.as_ref().borrow_mut().next = Some(new_list.tail.clone());
+            new_list.tail.as_ref().borrow_mut().pre = Some(Rc::downgrade(&new_list.head));
+            new_list
+        }
+    }
 }

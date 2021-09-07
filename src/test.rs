@@ -78,7 +78,7 @@ fn path_search(map:& Vec<Vec<char>>, start_x: i32, start_y: i32, end_x: i32, end
     }
 
     let mut path = Vec::<Point>::new();
-    let mut start = Point(start_x, start_y, 1);
+    let start = Point(start_x, start_y, 1);
     
     path.push(start.clone());
     let end = Point(end_x, end_y, 1);
@@ -110,8 +110,9 @@ fn path_search(map:& Vec<Vec<char>>, start_x: i32, start_y: i32, end_x: i32, end
         print!("({}, {})->", v.0, v.1);
     }
     println!("end");
-    println!("dsdsd");
 }
+
+
 
 #[test]
 fn stack_test() {
